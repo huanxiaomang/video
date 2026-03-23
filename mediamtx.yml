@@ -1,0 +1,37 @@
+# MediaMTX配置文件
+# 用于电厂巡检机器人视频传输系统
+
+# 日志级别: debug, info, warn
+logLevel: info
+
+# RTSP服务器配置
+rtspAddress: :8554
+rtspTransports: [tcp, udp]
+rtspEncryption: "no"
+# RTP和RTCP端口（避免与FastAPI的8000端口冲突）
+rtpAddress: :9000
+rtcpAddress: :9001
+
+# WebRTC配置（用于低延迟播放）
+webrtcAddress: :8889
+webrtcICEServers2: []
+
+# HLS配置（备用）
+hlsAddress: :8888
+hlsAlwaysRemux: no
+
+# RTMP配置（备用）
+rtmpAddress: :1935
+
+# 允许所有路径（动态创建）
+# 不设置任何认证参数，允许匿名访问
+paths:
+  all:
+    # 启用录像功能
+    record: yes
+    recordPath: ./server/recordings/%path/%Y-%m-%d_%H-%M-%S
+    recordFormat: fmp4
+    recordPartDuration: 1h
+    recordSegmentDuration: 1h
+    recordDeleteAfter: 168h  # 7天后自动删除
+
