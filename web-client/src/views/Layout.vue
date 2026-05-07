@@ -4,7 +4,7 @@
       <!-- 侧边栏 -->
       <el-aside width="200px">
         <div class="logo">
-          <h2>视频监控系统</h2>
+          <h2>{{ configStore.settings.systemName }}</h2>
         </div>
         <el-menu
           :default-active="activeMenu"
@@ -66,11 +66,13 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useConfigStore } from '@/stores/config'
 import { ElMessageBox } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const configStore = useConfigStore()
 
 const activeMenu = computed(() => route.path)
 const currentPageTitle = computed(() => route.meta.title as string || '')

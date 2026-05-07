@@ -197,6 +197,36 @@ async def get_device(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/{device_id}/offline")
+async def device_offline(
+    device_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """设备下线"""
+    try:
+        stmt = (
+            update(Device)
+            .where(Device.device_id == device_id)
+            .values(status="offline")
+        )
+        
+        result = await db.execute(stmt)
+        await db.commit()
+        
+        if result.rowcount == 0:
+            raise HTTPException(status_code=404, detail="设备不存在")
+        
+        logger.info(f"设备手动下线: {device_id}")
+        
+        return {"message": "下线成功"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"设备下线失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.delete("/{device_id}")
 async def delete_device(
     device_id: str,

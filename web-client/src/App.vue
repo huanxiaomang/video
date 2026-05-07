@@ -3,14 +3,36 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useConfigStore } from '@/stores/config'
 
 const userStore = useUserStore()
+const configStore = useConfigStore()
+const route = useRoute()
+
+// 更新网页标题
+const updateTitle = () => {
+  const systemName = configStore.settings.systemName || '视频监控系统'
+  const pageTitle = route.meta.title as string
+  if (pageTitle) {
+    document.title = `${pageTitle} - ${systemName}`
+  } else {
+    document.title = systemName
+  }
+}
+
+// 监听路由变化更新标题
+watch(() => route.path, updateTitle)
+
+// 监听系统名称变化更新标题
+watch(() => configStore.settings.systemName, updateTitle)
 
 onMounted(() => {
   // 初始化用户状态
   userStore.init()
+  updateTitle()
 })
 </script>
 

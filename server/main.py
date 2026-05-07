@@ -15,6 +15,7 @@ import api_auth
 import api_recordings
 import api_config
 from recording_scanner import scanner
+from device_monitor import monitor
 
 
 @asynccontextmanager
@@ -33,6 +34,8 @@ async def lifespan(app: FastAPI):
 
     # 启动录像扫描服务（后台任务）
     scanner_task = asyncio.create_task(scanner.start())
+    # 启动设备监控服务（后台任务）
+    monitor_task = asyncio.create_task(monitor.start())
 
     logger.info("服务器初始化完成")
 
@@ -40,12 +43,18 @@ async def lifespan(app: FastAPI):
 
     # 关闭时清理
     logger.info("开始清理资源...")
+    
     scanner.stop()
     scanner_task.cancel()
+    
+    monitor.stop()
+    monitor_task.cancel()
+    
     try:
-        await scanner_task
-    except asyncio.CancelledError:
-        pass
+        await asyncio.gather(scanner_task, monitor_task, return_exceptions=True)
+    except Exception as e:
+        logger.error(f"清理后台任务异常: {e}")
+
     await close_database()
     logger.info("传输服务器已停止")
 

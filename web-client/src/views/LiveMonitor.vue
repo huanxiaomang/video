@@ -63,84 +63,89 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { Refresh, VideoCameraFilled } from '@element-plus/icons-vue'
 import { useDeviceStore } from '@/stores/device'
+import { useConfigStore } from '@/stores/config'
 import type { Device, LayoutType } from '@/types'
 import VideoPlayer from '@/components/VideoPlayer.vue'
 
 const deviceStore = useDeviceStore()
+const configStore = useConfigStore()
 
 const STORAGE_KEY_LAYOUT = 'live_monitor_layout'
 const STORAGE_KEY_DEVICES = 'live_monitor_devices'
 
-const layout = ref<LayoutType>(4)
+// 初始布局优先使用全局配置
+const initialLayout = configStore.settings.defaultLayout as LayoutType
+
+const layout = ref<LayoutType>(initialLayout)
 const selectedDevices = ref<(Device | null)[]>([])
 const showDeviceDialog = ref(false)
 const currentCellIndex = ref(0)
+let refreshTimer: any = null
 
 const onlineDevices = computed(() => {
   return deviceStore.devices.filter((d) => d.status === 'online')
 })
 
-// 保存布局到localStorage
+// 自动刷新逻辑
+const setupAutoRefresh = () => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+    refreshTimer = null
+  }
+
+  if (configStore.settings.autoRefresh) {
+    refreshTimer = setInterval(() => {
+      deviceStore.fetchDevices()
+    }, configStore.settings.refreshInterval * 1000)
+  }
+}
+
+// 监听配置变化，实时更新刷新逻辑
+watch(() => configStore.settings, () => {
+  setupAutoRefresh()
+}, { deep: true })
+
+// 保存布局到localStorage (仅保存设备ID，不保存分屏数)
 const saveLayoutToStorage = () => {
   try {
-    localStorage.setItem(STORAGE_KEY_LAYOUT, String(layout.value))
-
-    // 保存设备ID列表（只保存ID，不保存完整对象）
     const deviceIds = selectedDevices.value.map(d => d?.device_id || null)
     localStorage.setItem(STORAGE_KEY_DEVICES, JSON.stringify(deviceIds))
   } catch (error) {
-    // 静默失败，不影响用户体验
-    console.warn('保存布局失败:', error)
+    console.warn('保存设备选择失败:', error)
   }
 }
 
 // 从localStorage恢复布局
-const loadLayoutFromStorage = () => {
+const restoreLayoutFromStorage = () => {
   try {
-    const savedLayout = localStorage.getItem(STORAGE_KEY_LAYOUT)
     const savedDeviceIds = localStorage.getItem(STORAGE_KEY_DEVICES)
-
-    if (savedLayout) {
-      const layoutValue = parseInt(savedLayout) as LayoutType
-      if ([1, 4, 9, 16].includes(layoutValue)) {
-        layout.value = layoutValue
-      }
-    }
 
     if (savedDeviceIds) {
       const deviceIds: (string | null)[] = JSON.parse(savedDeviceIds)
-
-      // 等待设备列表加载后再恢复
       const restoreDevices = () => {
         const devices = deviceIds.map(id => {
           if (!id) return null
-          // 从设备列表中查找对应的设备
           return deviceStore.devices.find(d => d.device_id === id) || null
         })
-
         selectedDevices.value = devices
       }
 
-      // 如果设备列表已加载，立即恢复；否则等待
       if (deviceStore.devices.length > 0) {
         restoreDevices()
       } else {
-        // 延迟恢复，等待设备列表加载
         setTimeout(restoreDevices, 1000)
       }
     }
   } catch (error) {
-    // 静默失败，使用默认布局
-    console.warn('恢复布局失败:', error)
+    console.warn('恢复设备选择失败:', error)
   }
 }
 
 const setLayout = (newLayout: LayoutType) => {
   layout.value = newLayout
-  // 调整选中设备数组大小
   if (selectedDevices.value.length > newLayout) {
     selectedDevices.value = selectedDevices.value.slice(0, newLayout)
   } else {
@@ -148,6 +153,7 @@ const setLayout = (newLayout: LayoutType) => {
       selectedDevices.value.push(null)
     }
   }
+  // 不再保存 layout 到 LS
   saveLayoutToStorage()
 }
 
@@ -168,7 +174,7 @@ const handleCloseVideo = (index: number) => {
 }
 
 const refreshDevices = async () => {
-  await deviceStore.fetchDevices({ status: 'online' })
+  await deviceStore.fetchDevices()
 }
 
 // 监听selectedDevices变化，自动保存
@@ -177,15 +183,18 @@ watch(selectedDevices, () => {
 }, { deep: true })
 
 onMounted(async () => {
-  // 先加载设备列表
-  await refreshDevices()
+  // 加载设备列表
+  await deviceStore.fetchDevices()
+  
+  // 恢复布局
+  restoreLayoutFromStorage()
+  
+  // 初始化自动刷新
+  setupAutoRefresh()
 
-  // 然后恢复布局
-  loadLayoutFromStorage()
-
-  // 如果没有恢复到布局，使用默认4分屏
+  // 如果没有恢复到布局，根据配置初始化
   if (selectedDevices.value.length === 0) {
-    setLayout(4)
+    setLayout(initialLayout)
   }
 })
 </script>

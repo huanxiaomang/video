@@ -131,7 +131,7 @@ class DeviceManager:
     
     def unregister(self) -> bool:
         """
-        注销设备
+        注销设备（标记为离线）
         
         Returns:
             bool: 是否注销成功
@@ -140,8 +140,8 @@ class DeviceManager:
             return True
         
         try:
-            response = requests.delete(
-                f'{self.server_url}/api/devices/{self.device_id}',
+            response = requests.post(
+                f'{self.server_url}/api/devices/{self.device_id}/offline',
                 timeout=10
             )
             

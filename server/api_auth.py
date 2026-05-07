@@ -30,6 +30,11 @@ class TokenData(BaseModel):
     username: Optional[str] = None
 
 
+class PasswordChange(BaseModel):
+    old_password: str
+    new_password: str
+
+
 class UserResponse(BaseModel):
     user_id: str
     username: str
@@ -153,4 +158,31 @@ async def logout(
     """用户登出"""
     logger.info(f"用户登出: {current_user.username}")
     return {"message": "登出成功"}
+
+
+@router.post("/change-password")
+async def change_password(
+    data: PasswordChange,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """修改密码"""
+    # 验证旧密码
+    if not verify_password(data.old_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="旧密码错误"
+        )
+    
+    # 生成新密码哈希
+    current_user.password_hash = get_password_hash(data.new_password)
+    
+    try:
+        await db.commit()
+        logger.info(f"用户 {current_user.username} 修改密码成功")
+        return {"message": "密码修改成功"}
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"修改密码失败: {e}")
+        raise HTTPException(status_code=500, detail="保存新密码失败")
 

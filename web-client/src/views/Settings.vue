@@ -35,109 +35,6 @@
           </el-form>
         </el-tab-pane>
 
-        <!-- 视频设置 -->
-        <el-tab-pane label="视频设置" name="video">
-          <el-form :model="videoSettings" label-width="120px">
-            <el-form-item label="默认分辨率">
-              <el-select v-model="videoSettings.defaultResolution">
-                <el-option label="720P" value="720p" />
-                <el-option label="1080P" value="1080p" />
-                <el-option label="4K" value="4k" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="默认帧率">
-              <el-select v-model="videoSettings.defaultFps">
-                <el-option label="15 fps" :value="15" />
-                <el-option label="25 fps" :value="25" />
-                <el-option label="30 fps" :value="30" />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="默认码率">
-              <el-input v-model="videoSettings.defaultBitrate" type="number">
-                <template #append>kbps</template>
-              </el-input>
-            </el-form-item>
-          </el-form>
-        </el-tab-pane>
-
-        <!-- 录像设置 -->
-        <el-tab-pane label="录像设置" name="recording">
-          <el-alert
-            title="提示"
-            type="warning"
-            :closable="false"
-            style="margin-bottom: 20px"
-          >
-            修改录像配置后需要重启MediaMTX才能生效
-          </el-alert>
-
-          <el-form :model="recordingSettings" label-width="140px" v-loading="recordingLoading">
-            <el-form-item label="启用自动录像">
-              <el-switch
-                v-model="recordingSettings.enabled"
-                @change="handleRecordingToggle"
-                :loading="toggleLoading"
-              />
-              <span style="margin-left: 10px; color: #909399">
-                {{ recordingSettings.enabled ? '已启用' : '已禁用' }}
-              </span>
-            </el-form-item>
-
-            <el-divider />
-
-            <el-form-item label="录像格式">
-              <el-select v-model="recordingSettings.record_format" disabled>
-                <el-option label="fmp4 (推荐)" value="fmp4" />
-                <el-option label="mpegts" value="mpegts" />
-              </el-select>
-              <div style="color: #909399; font-size: 12px; margin-top: 5px">
-                fmp4格式浏览器原生支持，适合Web播放
-              </div>
-            </el-form-item>
-
-            <el-form-item label="录像路径">
-              <el-input v-model="recordingSettings.record_path" disabled>
-                <template #prepend>./</template>
-              </el-input>
-              <div style="color: #909399; font-size: 12px; margin-top: 5px">
-                %path = 设备ID, %Y-%m-%d_%H-%M-%S = 时间戳
-              </div>
-            </el-form-item>
-
-            <el-form-item label="分段时长">
-              <el-input v-model="recordingSettings.part_duration">
-                <template #append>小时</template>
-              </el-input>
-              <div style="color: #909399; font-size: 12px; margin-top: 5px">
-                每个录像文件的时长（如：1h = 1小时）
-              </div>
-            </el-form-item>
-
-            <el-form-item label="段落时长">
-              <el-input v-model="recordingSettings.segment_duration">
-                <template #append>小时</template>
-              </el-input>
-            </el-form-item>
-
-            <el-form-item label="自动删除">
-              <el-input v-model="recordingSettings.delete_after">
-                <template #append>小时</template>
-              </el-input>
-              <div style="color: #909399; font-size: 12px; margin-top: 5px">
-                录像保存时长，超过后自动删除（168h = 7天）
-              </div>
-            </el-form-item>
-
-            <el-form-item>
-              <el-button type="primary" @click="saveRecordingConfig" :loading="saveLoading">
-                保存录像配置
-              </el-button>
-              <el-button @click="loadRecordingConfig">
-                重置
-              </el-button>
-            </el-form-item>
-          </el-form>
-        </el-tab-pane>
 
         <!-- 用户信息 -->
         <el-tab-pane label="用户信息" name="user">
@@ -156,8 +53,9 @@
           <el-divider />
 
           <el-form label-width="120px">
-            <el-form-item label="修改密码">
-              <el-button type="primary">修改密码</el-button>
+            <el-form-item label="账号操作">
+              <el-button type="primary" @click="passwordDialogVisible = true">修改密码</el-button>
+              <el-button type="danger" plain @click="handleLogout">退出登录</el-button>
             </el-form-item>
           </el-form>
         </el-tab-pane>
@@ -166,17 +64,15 @@
         <el-tab-pane label="关于" name="about">
           <el-descriptions :column="1" border>
             <el-descriptions-item label="系统名称">
-              电厂巡检视频监控系统
+              {{ basicSettings.systemName }}
             </el-descriptions-item>
             <el-descriptions-item label="版本">
               v1.0.0
             </el-descriptions-item>
             <el-descriptions-item label="描述">
-              端到端无线视频传输系统，用于电厂机器人巡检
+              本系统是一个基于 WebRTC 和 RTSP 协议的分布式视频监控解决方案。支持多端设备接入、实时监控、录像回放及设备管理。通过 MediaMTX 媒体服务器实现低延迟流传输，后端采用 FastAPI 构建，前端使用 Vue 3 + Element Plus 提供现代化的用户界面。
             </el-descriptions-item>
-            <el-descriptions-item label="技术栈">
-              Vue 3 + TypeScript + Element Plus
-            </el-descriptions-item>
+
           </el-descriptions>
         </el-tab-pane>
       </el-tabs>
@@ -186,44 +82,80 @@
         <el-button @click="resetSettings">重置</el-button>
       </div>
     </el-card>
+
+    <!-- 修改密码弹窗 -->
+    <el-dialog
+      v-model="passwordDialogVisible"
+      title="修改密码"
+      width="400px"
+      @closed="resetPasswordForm"
+    >
+      <el-form :model="passwordForm" :rules="passwordRules" ref="passwordFormRef" label-width="100px">
+        <el-form-item label="旧密码" prop="oldPassword">
+          <el-input v-model="passwordForm.oldPassword" type="password" show-password />
+        </el-form-item>
+        <el-form-item label="新密码" prop="newPassword">
+          <el-input v-model="passwordForm.newPassword" type="password" show-password />
+        </el-form-item>
+        <el-form-item label="确认新密码" prop="confirmPassword">
+          <el-input v-model="passwordForm.confirmPassword" type="password" show-password />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="passwordDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitPasswordChange">确定</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, reactive } from 'vue'
 import { useUserStore } from '@/stores/user'
-import { ElMessage } from 'element-plus'
-import { getRecordingConfig, updateRecordingConfig, toggleRecording, type RecordingConfig } from '@/api/config'
+import { useConfigStore } from '@/stores/config'
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
+import { changePassword } from '@/api/auth'
 
 const userStore = useUserStore()
+const configStore = useConfigStore()
+const router = useRouter()
 
 const activeTab = ref('basic')
 
-const basicSettings = ref({
-  systemName: '电厂巡检视频监控系统',
-  defaultLayout: 4,
-  autoRefresh: true,
-  refreshInterval: 10,
+// 使用 store 中的设置作为初始值
+const basicSettings = ref({ ...configStore.settings })
+
+// 修改密码相关
+const passwordDialogVisible = ref(false)
+const passwordFormRef = ref<FormInstance>()
+const passwordForm = reactive({
+  oldPassword: '',
+  newPassword: '',
+  confirmPassword: ''
 })
 
-const videoSettings = ref({
-  defaultResolution: '720p',
-  defaultFps: 25,
-  defaultBitrate: 2000,
-})
+const validateConfirmPassword = (rule: any, value: any, callback: any) => {
+  if (value !== passwordForm.newPassword) {
+    callback(new Error('两次输入的密码不一致'))
+  } else {
+    callback()
+  }
+}
 
-const recordingSettings = ref<RecordingConfig>({
-  enabled: false,
-  record_path: 'server/recordings/%path/%Y-%m-%d_%H-%M-%S',
-  record_format: 'fmp4',
-  part_duration: '1h',
-  segment_duration: '1h',
-  delete_after: '168h'
-})
-
-const recordingLoading = ref(false)
-const toggleLoading = ref(false)
-const saveLoading = ref(false)
+const passwordRules = {
+  oldPassword: [{ required: true, message: '请输入旧密码', trigger: 'blur' }],
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: true, message: '请再次输入新密码', trigger: 'blur' },
+    { validator: validateConfirmPassword, trigger: 'blur' }
+  ]
+}
 
 const formatTime = (time: string) => {
   return new Date(time).toLocaleString('zh-CN')
@@ -238,83 +170,76 @@ const getRoleText = (role?: string) => {
   return role ? roleMap[role] || role : '-'
 }
 
-// 加载录像配置
-const loadRecordingConfig = async () => {
-  try {
-    recordingLoading.value = true
-    const response = await getRecordingConfig()
-    recordingSettings.value = response.data || response as any
-  } catch (error) {
-    console.error('加载录像配置失败:', error)
-    ElMessage.error('加载录像配置失败')
-  } finally {
-    recordingLoading.value = false
-  }
-}
-
-// 保存录像配置
-const saveRecordingConfig = async () => {
-  try {
-    saveLoading.value = true
-    await updateRecordingConfig(recordingSettings.value)
-    ElMessage.success('录像配置已保存，请重启MediaMTX使配置生效')
-  } catch (error) {
-    console.error('保存录像配置失败:', error)
-    ElMessage.error('保存录像配置失败')
-  } finally {
-    saveLoading.value = false
-  }
-}
-
-// 切换录像开关
-const handleRecordingToggle = async (enabled: boolean) => {
-  try {
-    toggleLoading.value = true
-    await toggleRecording(enabled)
-    ElMessage.success(`录像功能已${enabled ? '启用' : '禁用'}，请重启MediaMTX使配置生效`)
-  } catch (error) {
-    console.error('切换录像功能失败:', error)
-    ElMessage.error('切换录像功能失败')
-    // 恢复开关状态
-    recordingSettings.value.enabled = !enabled
-  } finally {
-    toggleLoading.value = false
-  }
+const loadSettings = () => {
+  basicSettings.value = { ...configStore.settings }
 }
 
 const saveSettings = () => {
-  // TODO: 保存设置到后端
-  ElMessage.success('设置已保存')
+  configStore.saveSettings(basicSettings.value)
+  ElMessage.success('设置已保存并同步至系统')
 }
 
 const resetSettings = () => {
-  basicSettings.value = {
-    systemName: '电厂巡检视频监控系统',
-    defaultLayout: 4,
-    autoRefresh: true,
-    refreshInterval: 10,
-  }
-  videoSettings.value = {
-    defaultResolution: '720p',
-    defaultFps: 25,
-    defaultBitrate: 2000,
-  }
+  configStore.resetSettings()
+  basicSettings.value = { ...configStore.settings }
   ElMessage.info('设置已重置')
 }
 
+const handleLogout = async () => {
+  try {
+    await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+      type: 'warning'
+    })
+    await userStore.logout()
+    router.push('/login')
+  } catch {
+    // 用户取消
+  }
+}
+
+const resetPasswordForm = () => {
+  if (passwordFormRef.value) {
+    passwordFormRef.value.resetFields()
+  }
+}
+
+const submitPasswordChange = async () => {
+  if (!passwordFormRef.value) return
+
+  await passwordFormRef.value.validate(async (valid) => {
+    if (valid) {
+      try {
+        await changePassword({
+          old_password: passwordForm.oldPassword,
+          new_password: passwordForm.newPassword
+        })
+        ElMessage.success('密码修改成功')
+        passwordDialogVisible.value = false
+      } catch (error: any) {
+        // 错误已经在 request.ts 中拦截处理并提示，这里可以做额外逻辑
+        console.error('修改密码失败', error)
+      }
+    }
+  })
+}
+
 onMounted(() => {
-  loadRecordingConfig()
+  loadSettings()
 })
 </script>
 
 <style scoped>
 .settings-page {
-  height: 100%;
+  padding: 20px;
 }
 
 .action-buttons {
   margin-top: 30px;
   text-align: right;
 }
-</style>
 
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+</style>

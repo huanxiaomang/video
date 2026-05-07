@@ -42,3 +42,14 @@ export function logout(): Promise<any> {
   })
 }
 
+/**
+ * 修改密码
+ */
+export function changePassword(data: any): Promise<any> {
+  return request({
+    url: '/api/auth/change-password',
+    method: 'post',
+    data,
+  })
+}
+
