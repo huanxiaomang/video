@@ -30,11 +30,9 @@ async def lifespan(app: FastAPI):
 
     # 创建录像目录
     os.makedirs(settings.RECORDING_PATH, exist_ok=True)
-    logger.info(f"录像目录: {settings.RECORDING_PATH}")
 
     # 启动录像扫描服务（后台任务）
     scanner_task = asyncio.create_task(scanner.start())
-    logger.info("录像扫描服务已启动")
 
     logger.info("服务器初始化完成")
 
@@ -114,10 +112,10 @@ def setup_logging():
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     # 配置日志
     setup_logging()
-    
+
     # 启动服务器
     uvicorn.run(
         "main:app",

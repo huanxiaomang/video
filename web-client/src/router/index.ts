@@ -18,7 +18,7 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
     redirect: '/monitor',
     children: [
-      {
+        {
         path: '/monitor',
         name: 'LiveMonitor',
         component: () => import('@/views/LiveMonitor.vue'),
@@ -29,12 +29,6 @@ const routes: RouteRecordRaw[] = [
         name: 'DeviceManagement',
         component: () => import('@/views/DeviceManagement.vue'),
         meta: { title: '设备管理' },
-      },
-      {
-        path: '/playback',
-        name: 'PlaybackPage',
-        component: () => import('@/views/PlaybackPage.vue'),
-        meta: { title: '录像回放' },
       },
       {
         path: '/settings',
@@ -54,7 +48,7 @@ const router = createRouter({
 // 路由守卫
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('access_token')
-  
+
   if (to.meta.requiresAuth && !token) {
     // 需要认证但未登录，跳转到登录页
     next('/login')

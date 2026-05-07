@@ -21,10 +21,6 @@
             <el-icon><Monitor /></el-icon>
             <span>设备管理</span>
           </el-menu-item>
-          <el-menu-item index="/playback">
-            <el-icon><VideoPlay /></el-icon>
-            <span>录像回放</span>
-          </el-menu-item>
           <el-menu-item index="/settings">
             <el-icon><Setting /></el-icon>
             <span>系统设置</span>
