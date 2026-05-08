@@ -11,58 +11,54 @@ import time
 from fractions import Fraction
 
 
+from picamera2 import Picamera2
+
+
+
 class CameraVideoTrack(VideoStreamTrack):
-    """摄像头视频轨道"""
-    
-    def __init__(self, camera_id: int = 0, width: int = 1280, height: int = 720, fps: int = 30):
+
+    def __init__(self, width=1280, height=720, fps=30):
         super().__init__()
-        self.camera_id = camera_id
+
         self.width = width
         self.height = height
         self.fps = fps
-        self.cap = None
+
+        self.picam2 = Picamera2()
+
+        config = self.picam2.create_video_configuration(
+            main={"size": (width, height)}
+        )
+
+        self.picam2.configure(config)
+
+        self.picam2.start()
+
         self.frame_count = 0
         self.start_time = time.time()
-        
-    async def start(self):
-        """启动摄像头"""
-        self.cap = cv2.VideoCapture(self.camera_id)
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
-        self.cap.set(cv2.CAP_PROP_FPS, self.fps)
-        
-        actual_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        actual_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        logger.info(f"摄像头已启动: {actual_width}x{actual_height} @ {self.fps}fps")
-        
+
     async def recv(self):
-        """接收视频帧"""
+
         pts, time_base = await self.next_timestamp()
-        
-        ret, frame = self.cap.read()
-        if not ret:
-            logger.warning("读取帧失败")
-            # 返回黑帧
-            frame = np.zeros((self.height, self.width, 3), dtype=np.uint8)
-        
-        # 转换为 VideoFrame
+
+        frame = self.picam2.capture_array()
+
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
+
+        video_frame = VideoFrame.from_ndarray(
+            frame,
+            format="rgb24"
+        )
+
         video_frame.pts = pts
         video_frame.time_base = time_base
-        
+
         self.frame_count += 1
-        if self.frame_count % 100 == 0:
-            elapsed = time.time() - self.start_time
-            actual_fps = self.frame_count / elapsed
-            logger.info(f"已推流 {self.frame_count} 帧，实际帧率: {actual_fps:.2f} fps")
-        
+
         return video_frame
-    
+
     def stop(self):
-        """停止摄像头"""
-        if self.cap:
-            self.cap.release()
+        self.picam2.stop()
 
 
 class WHIPStreamer:
@@ -96,12 +92,10 @@ class WHIPStreamer:
             
             # 创建视频轨道
             self.video_track = CameraVideoTrack(
-                camera_id=self.camera_id,
                 width=self.width,
                 height=self.height,
                 fps=self.fps
             )
-            await self.video_track.start()
             
             # 添加视频轨道
             self.pc.addTrack(self.video_track)
