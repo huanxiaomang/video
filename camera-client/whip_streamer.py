@@ -27,7 +27,7 @@ class CameraVideoTrack(VideoStreamTrack):
         self.picam2 = Picamera2()
 
         config = self.picam2.create_video_configuration(
-            main={"size": (width, height)}
+            main={"size": (width, height), "format": "RGB888"}
         )
 
         self.picam2.configure(config)
@@ -43,7 +43,7 @@ class CameraVideoTrack(VideoStreamTrack):
 
         frame = self.picam2.capture_array()
 
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
 
         video_frame = VideoFrame.from_ndarray(
             frame,
