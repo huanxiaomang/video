@@ -47,7 +47,7 @@ class CameraVideoTrack(VideoStreamTrack):
 
         video_frame = VideoFrame.from_ndarray(
             frame,
-            format="rgb24"
+            format="bgr24"
         )
 
         video_frame.pts = pts
